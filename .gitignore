@@ -1,0 +1,30 @@
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+
+# Base de datos y logs
+*.db
+*.db-wal
+*.db-shm
+*.log
+data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+*.egg-info/
+
+# Archivos legacy de Matrix/otras pruebas
+main.py
+scheduler.py
+config.py
+inbox_watcher.py
+sync_state.py
+test_*.py
+*.plist
+.DS_Store
+Thumbs.db
