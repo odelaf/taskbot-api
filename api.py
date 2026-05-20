@@ -1,44 +1,71 @@
-# api.py
-# TaskBot API - FastAPI + Turso (persistente) - Compatible con Render
-import os
+# api.py - DEBUG VERSION (imprime TODO antes de crashear)
 import sys
+import os
+
+# 🔥 DEBUG: Esto se ejecuta AL IMPORTAR el módulo, antes de cualquier código
+print("🔥 DEBUG: api.py cargado", file=sys.stderr)
+sys.stderr.flush()
+
+# Forzar que el directorio actual esté en el path
+sys.path.insert(0, os.getcwd())
+print(f"🔥 DEBUG: CWD={os.getcwd()}, PATH={sys.path[:3]}", file=sys.stderr)
+sys.stderr.flush()
+
+# Intentar importar y capturar CUALQUIER error
+try:
+    print("🔥 DEBUG: Intentando importar database...", file=sys.stderr)
+    sys.stderr.flush()
+    import database
+    print("✅ DEBUG: database importado", file=sys.stderr)
+    sys.stderr.flush()
+except Exception as e:
+    print(f"❌ CRASH AL IMPORTAR database: {type(e).__name__}: {e}", file=sys.stderr)
+    import traceback; traceback.print_exc(file=sys.stderr)
+    sys.stderr.flush()
+    # No hacemos sys.exit() para que uvicorn pueda arrancar y mostrar el error en /health
+
+try:
+    print("🔥 DEBUG: Intentando importar commands...", file=sys.stderr)
+    sys.stderr.flush()
+    import commands
+    print("✅ DEBUG: commands importado", file=sys.stderr)
+    sys.stderr.flush()
+except Exception as e:
+    print(f"❌ CRASH AL IMPORTAR commands: {type(e).__name__}: {e}", file=sys.stderr)
+    import traceback; traceback.print_exc(file=sys.stderr)
+    sys.stderr.flush()
+
+# Ahora sí, importar FastAPI (si llegamos aquí, los imports locales funcionaron)
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import database
-import commands
 
-# ── Lifespan: inicializa BD al arrancar (CORRECTO para FastAPI) ──
+print("🔥 DEBUG: FastAPI importado, definiendo app...", file=sys.stderr)
+sys.stderr.flush()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
-        print("🚀 Iniciando TaskBot API...", file=sys.stderr)
+        print("🚀 lifespan: iniciando...", file=sys.stderr)
+        sys.stderr.flush()
         await database.init_db()
-        print("✅ BD persistente inicializada en Turso", file=sys.stderr)
+        print("✅ lifespan: BD inicializada", file=sys.stderr)
+        sys.stderr.flush()
         yield
     except Exception as e:
-        print(f"❌ FALLO CRÍTICO AL INICIAR: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc(file=sys.stderr)
+        print(f"❌ lifespan CRASH: {type(e).__name__}: {e}", file=sys.stderr)
+        import traceback; traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
         raise
 
-# ── App con lifespan ──
-app = FastAPI(
-    title="TaskBot API",
-    version="1.0",
-    lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url=None
-)
+app = FastAPI(title="TaskBot API", version="1.0", lifespan=lifespan)
 
-# ── Modelos ──
 class CommandInput(BaseModel):
     texto: str
 
-# ── Endpoints ──
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "TaskBot API", "docs": "/docs"}
+    return {"status": "ok", "service": "TaskBot API"}
 
 @app.get("/health")
 def health():
@@ -49,12 +76,13 @@ async def ejecutar_comando(input: CommandInput):
     try:
         cmd = commands.parsear(input.texto)
         if not cmd:
-            return {"error": "Formato inválido. Usa: ACCIÓN::PARTE1::PARTE2"}
+            return {"error": "Formato inválido"}
         resultado = await commands.ejecutar(cmd)
         return {"resultado": resultado}
     except Exception as e:
-        print(f"❌ Error en /ejecutar: {e}", file=sys.stderr)
+        print(f"❌ /ejecutar error: {e}", file=sys.stderr)
         import traceback; traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/consultar")
@@ -69,6 +97,10 @@ async def consultar(tipo: str = "PENDIENTES", filtro: str | None = None):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error en /consultar: {e}", file=sys.stderr)
+        print(f"❌ /consultar error: {e}", file=sys.stderr)
         import traceback; traceback.print_exc(file=sys.stderr)
+        sys.stderr.flush()
         raise HTTPException(status_code=500, detail=str(e))
+
+print("🔥 DEBUG: Fin de api.py alcanzado", file=sys.stderr)
+sys.stderr.flush()
