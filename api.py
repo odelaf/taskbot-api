@@ -1,22 +1,35 @@
 # api.py
-# TaskBot API - FastAPI + Turso (persistente)
+# TaskBot API - FastAPI + Turso (persistente) - Compatible con Render
 import os
-from pathlib import Path
+import sys
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import database, commands
+import database
+import commands
 
-# ── Lifespan: inicializa BD al arrancar ──
+# ── Lifespan: inicializa BD al arrancar (CORRECTO para FastAPI) ──
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: inicializar BD
-    await database.init_db()
-    yield
-    # Shutdown: (opcional) limpiar recursos si es necesario
+    try:
+        print("🚀 Iniciando TaskBot API...", file=sys.stderr)
+        await database.init_db()
+        print("✅ BD persistente inicializada en Turso", file=sys.stderr)
+        yield
+    except Exception as e:
+        print(f"❌ FALLO CRÍTICO AL INICIAR: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc(file=sys.stderr)
+        raise
 
 # ── App con lifespan ──
-app = FastAPI(title="TaskBot API", version="1.0", lifespan=lifespan)
+app = FastAPI(
+    title="TaskBot API",
+    version="1.0",
+    lifespan=lifespan,
+    docs_url="/docs",
+    redoc_url=None
+)
 
 # ── Modelos ──
 class CommandInput(BaseModel):
@@ -29,7 +42,7 @@ def root():
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {"status": "healthy", "python": sys.version}
 
 @app.post("/ejecutar")
 async def ejecutar_comando(input: CommandInput):
@@ -40,7 +53,8 @@ async def ejecutar_comando(input: CommandInput):
         resultado = await commands.ejecutar(cmd)
         return {"resultado": resultado}
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Error en /ejecutar: {e}", file=sys.stderr)
+        import traceback; traceback.print_exc(file=sys.stderr)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/consultar")
@@ -55,5 +69,6 @@ async def consultar(tipo: str = "PENDIENTES", filtro: str | None = None):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"❌ Error consulta: {e}")
+        print(f"❌ Error en /consultar: {e}", file=sys.stderr)
+        import traceback; traceback.print_exc(file=sys.stderr)
         raise HTTPException(status_code=500, detail=str(e))
