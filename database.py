@@ -1,58 +1,57 @@
-# database.py - DEBUG VERSION
-import os
-import sys
-
-print("🔥 DB DEBUG: database.py cargado", file=sys.stderr)
-sys.stderr.flush()
-
-try:
-    import libsql_client
-    print("✅ DB DEBUG: libsql_client importado", file=sys.stderr)
-    sys.stderr.flush()
-except ImportError as e:
-    print(f"❌ DB CRASH: libsql-client no instalado: {e}", file=sys.stderr)
-    sys.stderr.flush()
-    sys.exit(1)
+# database.py
+import os, sys
+import libsql_client
 
 _client = None
 
 def get_db():
-    """Retorna el cliente Turso, inicializándolo si es necesario."""
     global _client
     if _client is None:
         url = os.getenv("TURSO_DATABASE_URL")
         token = os.getenv("TURSO_AUTH_TOKEN")
-        
-        # 🔥 Forzar HTTPS para evitar WebSocket 505 en Render y local
+        # 🔥 Fallback HTTPS para evitar error 505 de WebSocket
         if url and url.startswith("libsql://"):
             url = url.replace("libsql://", "https://", 1)
-        
         _client = libsql_client.create_client(url=url, auth_token=token)
     return _client
 
 async def init_db():
-    print("🔥 DB DEBUG: init_db() iniciado", file=sys.stderr)
-    sys.stderr.flush()
-    client = get_db()
-    
-    try:
-        await client.execute("CREATE TABLE IF NOT EXISTS usuarios (alias TEXT PRIMARY KEY, matrix_id TEXT DEFAULT '', creado_en DATETIME DEFAULT CURRENT_TIMESTAMP)")
-        print("✅ DB DEBUG: tabla usuarios creada", file=sys.stderr)
-        sys.stderr.flush()
-        
-        await client.execute("CREATE TABLE IF NOT EXISTS categorias (id INTEGER PRIMARY KEY AUTOINCREMENT, nombre TEXT UNIQUE NOT NULL, creado_en DATETIME DEFAULT CURRENT_TIMESTAMP)")
-        print("✅ DB DEBUG: tabla categorias creada", file=sys.stderr)
-        sys.stderr.flush()
-        
-        await client.execute("CREATE TABLE IF NOT EXISTS tareas (id INTEGER PRIMARY KEY AUTOINCREMENT, categoria_id INTEGER NOT NULL, contenido TEXT NOT NULL, estado TEXT DEFAULT 'pendiente', prioridad TEXT DEFAULT 'media', asignado_a TEXT DEFAULT 'sin_asignar', creado_en DATETIME DEFAULT CURRENT_TIMESTAMP, completada_en DATETIME, FOREIGN KEY(categoria_id) REFERENCES categorias(id))")
-        print("✅ DB DEBUG: tabla tareas creada", file=sys.stderr)
-        sys.stderr.flush()
-        
-        print("✅ DB DEBUG: Todas las tablas creadas", file=sys.stderr)
-        sys.stderr.flush()
-        
-    except Exception as e:
-        print(f"❌ DB ERROR creando tablas: {type(e).__name__}: {e}", file=sys.stderr)
-        import traceback; traceback.print_exc(file=sys.stderr)
-        sys.stderr.flush()
-        raise
+    c = get_db()
+    await c.execute("""CREATE TABLE IF NOT EXISTS usuario (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT UNIQUE NOT NULL,
+        creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    await c.execute("""CREATE TABLE IF NOT EXISTS categoria (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT UNIQUE NOT NULL,
+        creado_en DATETIME DEFAULT CURRENT_TIMESTAMP
+    )""")
+    await c.execute("""CREATE TABLE IF NOT EXISTS tarea (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        categoria_id INTEGER NOT NULL,
+        usuario_id INTEGER,
+        descripcion TEXT NOT NULL,
+        prioridad INTEGER DEFAULT 3 CHECK(prioridad BETWEEN 1 AND 5),
+        estado INTEGER CHECK(estado IN (0, 1)),
+        creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+        actualizado_en DATETIME,
+        completada_en DATETIME,
+        FOREIGN KEY(categoria_id) REFERENCES categoria(id) ON DELETE CASCADE,
+        FOREIGN KEY(usuario_id) REFERENCES usuario(id) ON DELETE SET NULL
+    )""")
+    await c.execute("""CREATE TABLE IF NOT EXISTS supermercado (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chino TEXT NOT NULL,
+        pinyin TEXT,
+        español TEXT,
+        existencia INTEGER CHECK(existencia IN (0, 1)),
+        creado_en DATETIME DEFAULT CURRENT_TIMESTAMP,
+        actualizado_en DATETIME
+    )""")
+    # Índices para rendimiento
+    await c.execute("CREATE INDEX IF NOT EXISTS idx_tarea_cat ON tarea(categoria_id)")
+    await c.execute("CREATE INDEX IF NOT EXISTS idx_tarea_usr ON tarea(usuario_id)")
+    await c.execute("CREATE INDEX IF NOT EXISTS idx_tarea_estado ON tarea(estado)")
+    await c.execute("CREATE INDEX IF NOT EXISTS idx_super_exist ON supermercado(existencia)")
+    print("✅ BD Turso inicializada con nuevo esquema", file=sys.stderr)
