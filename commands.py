@@ -8,10 +8,10 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 logger = logging.getLogger(__name__)
 
 def _rows_to_dicts(rows):
-    """ CRÍTICO: Convierte filas de libsql-client a lista de dicts para JSON."""
+    """Convierte filas de libsql-client a dicts puros, evitando errores de serialización."""
     if not rows:
         return []
-    return [dict(row) for row in rows]
+    return [{col: row[col] for col in row.keys()} for row in rows]
 
 def parsear(texto: str) -> dict | None:
     texto = texto.strip()
