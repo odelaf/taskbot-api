@@ -60,13 +60,20 @@ def parsear(texto: str) -> dict | None:
 
     # Consultar (K)
     elif acc == "K" and len(p) >= 2:
-        if p[1].upper() == "U":
+        sub = p[1].upper()
+        
+        if sub == "U":
             return {"accion": "K_USUARIOS"} if len(p)==2 else {"accion": "K_USUARIO_TAREAS", "usuario": p[2]}
-        if p[1].upper() == "C":
+            
+        if sub == "C":
+            # k::c → lista categorías | k::c::0/1 → filtro por estado
             return {"accion": "K_CATEGORIAS"} if len(p)==2 else {"accion": "K_CAT_ESTADO", "cat": p[1], "estado": int(p[2])}
-        if p[1].upper() == "T":
+            
+        if sub == "T":
+            # k::t → todas | k::t::0/1 → filtro global
             return {"accion": "K_TODAS"} if len(p)==2 else {"accion": "K_ESTADO_GLOBAL", "estado": int(p[2])}
-        # Fallback para k::categoria
+            
+        # Fallback: cualquier otra palabra se interpreta como nombre de categoría (ej: k::casa)
         return {"accion": "K_CAT_TAREAS", "cat": p[1]}
 
     # Asignar (A)
@@ -217,7 +224,7 @@ async def ejecutar(cmd: dict):
         
         if acc == "K_CATEGORIAS":
             res = await c.execute("SELECT id, nombre FROM categoria ORDER BY nombre")
-            return {"msg": f"{len(res.rows)} categorías", "items": _rows_to_dicts(res.rows)}  # <-- Usa _rows_to_dicts
+            return {"msg": f"{len(res.rows)} categorías", "items": _rows_to_dicts(res.rows)}
         
         if acc == "K_CAT_TAREAS":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, t.usuario_id FROM tarea t
