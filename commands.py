@@ -99,6 +99,12 @@ def parsear(texto: str) -> dict | None:
             logger.info(f"✅ Comando: E_TAREA id={p[2]}")
             return {"accion": "E_TAREA", "id": int(p[2])}
     
+    # 🔹 ASIGNAR: a::id::usuario
+    elif acc == "A" and len(p) == 3 and p[1].isdigit():
+        return {"accion": "ASIGNAR", "id": int(p[1]), "usuario": p[2]}
+
+    return None
+
     # ❌ No reconocido
     logger.warning(f"❌ Comando no reconocido: '{texto}' → partes={p}")
     return None
@@ -108,13 +114,23 @@ async def ejecutar(cmd: dict):
     acc = cmd["accion"]
     
     try:
+        if acc == "ASIGNAR":
+            uid_res = await c.execute("SELECT id FROM usuario WHERE nombre=?", (cmd["usuario"],))
+            if not uid_res.rows:
+                return {"msg": f"Usuario '{cmd['usuario']}' no existe. Créalo con c::u::{cmd['usuario']}", "items": []}
+            
+            await c.execute("UPDATE tarea SET usuario_id=? WHERE id=?", (uid_res.rows[0]["id"], cmd["id"]))
+            return {"msg": f"Tarea {cmd['id']} asignada a {cmd['usuario']}", "items": []}
+        
         if acc == "HELP":
             help_text = (
-                "📋 Comandos:\n"
+                " Comandos:\n"
                 "• c::u::nombre | c::c::nombre | c::cat::desc::[0|1]\n"
                 "• k::u | k::u::nombre | k::c | k::cat | k::cat::0|1\n"
                 "• k::t | k::t::0|1\n"
-                "• id::0|1|null | e::u|c|t::valor\n"
+                "• id::0|1|null (Estado)\n"
+                "• a::id::usuario (Asignar tarea)\n"
+                "• e::u|c|t::valor\n"
                 "• s | s::id::0|1"
             )
             return {"msg": help_text, "items": []}
