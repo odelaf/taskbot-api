@@ -14,32 +14,32 @@ def _rows_to_dicts(rows):
     return [dict(row) for row in rows]
 
 def parsear(texto: str) -> dict | None:
-    """Parser robusto con soporte para todos los comandos."""
+    """Parser robusto con soporte para Help Jerárquico."""
     texto = texto.strip()
     if not texto:
         return None
     
-    logger.info(f"🔍 Parsing: '{texto}'")
     p = [x.strip() for x in texto.split("::") if x.strip()]
     if not p:
         return None
     
     primera = p[0].lower()
     
-    # 🔹 HELP GENERAL O ESPECÍFICO (help, ayuda, ?, h)
+    # 🔹 HELP (General o Específico)
+    # Debe ir primero para capturar variantes antes de procesar otras acciones
     if primera in ("help", "ayuda", "?", "h"):
         if len(p) == 1:
             return {"accion": "HELP"}
-        elif len(p) == 2:
+        else:
             sub = p[1].lower()
             if sub in ("c", "crear", "create"): return {"accion": "HELP_C"}
-            if sub in ("k", "ver", "list", "query"): return {"accion": "HELP_K"}
+            if sub in ("k", "consultar", "ver", "list"): return {"accion": "HELP_K"}
             if sub in ("a", "asignar", "assign"): return {"accion": "HELP_A"}
-            if sub in ("e", "borrar", "del", "delete"): return {"accion": "HELP_E"}
+            if sub in ("e", "eliminar", "borrar", "del"): return {"accion": "HELP_E"}
             if sub in ("s", "super", "mercado"): return {"accion": "HELP_S"}
-            if sub in ("estado", "status"): return {"accion": "HELP_ESTADO"}
-        return {"accion": "HELP"} # Fallback si el subcomando no se reconoce
-    
+            if sub in ("estado", "status", "id"): return {"accion": "HELP_ESTADO"}
+            return {"accion": "HELP"} # Fallback si no reconoce el subtema
+
     # 🔹 Estado: 5::0, 5::1, 5::null
     if len(p) == 2 and p[0].isdigit() and p[1].lower() in ("0", "1", "null"):
         return {"accion": "ESTADO", "id": int(p[0]), "estado": p[1]}
@@ -70,7 +70,7 @@ def parsear(texto: str) -> dict | None:
         if p[1].upper() == "U" and len(p) == 3:
             return {"accion": "K_USUARIO_TAREAS", "usuario": p[2]}
         if p[1].upper() == "C" and len(p) == 2:
-            return {"accion": "K_CATEGORIAS"}  # <-- Aquí está k::c
+            return {"accion": "K_CATEGORIAS"}
         if p[1].upper() != "T" and len(p) == 2:
             return {"accion": "K_CAT_TAREAS", "cat": p[1]}
         if p[1].upper() != "T" and len(p) == 3 and p[2] in ("0", "1"):
