@@ -14,85 +14,70 @@ def _rows_to_dicts(rows):
     return [dict(row) for row in rows]
 
 def parsear(texto: str) -> dict | None:
-    """Parser robusto con soporte para Help Jerárquico."""
     texto = texto.strip()
-    if not texto:
-        return None
-    
-    p = [x.strip() for x in texto.split("::") if x.strip()]
-    if not p:
-        return None
-    
-    primera = p[0].lower()
-    
-    # 🔹 HELP (General o Específico)
-    # Debe ir primero para capturar variantes antes de procesar otras acciones
-    if primera in ("help", "ayuda", "?", "h"):
-        if len(p) == 1:
-            return {"accion": "HELP"}
-        else:
-            sub = p[1].lower()
-            if sub in ("c", "crear", "create"): return {"accion": "HELP_C"}
-            if sub in ("k", "consultar", "ver", "list"): return {"accion": "HELP_K"}
-            if sub in ("a", "asignar", "assign"): return {"accion": "HELP_A"}
-            if sub in ("e", "eliminar", "borrar", "del"): return {"accion": "HELP_E"}
-            if sub in ("s", "super", "mercado"): return {"accion": "HELP_S"}
-            if sub in ("estado", "status", "id"): return {"accion": "HELP_ESTADO"}
-            return {"accion": "HELP"} # Fallback si no reconoce el subtema
+    if not texto: return None
 
-    # 🔹 Estado: 5::0, 5::1, 5::null
+    # 🔹 HELP FLEXIBLE (acepta "help k", "help::k", "h c", etc.)
+    lower_text = texto.lower()
+    if lower_text.startswith(("help", "ayuda", "h", "?")):
+        # Normaliza separadores a espacio solo para el comando help
+        parts = [p.strip() for p in texto.replace("::", " ").split() if p.strip()]
+        if parts and parts[0].lower() in ("help", "ayuda", "h", "?"):
+            if len(parts) == 1:
+                return {"accion": "HELP"}
+            sub = parts[1].lower()
+            if sub in ("c", "crear"): return {"accion": "HELP_C"}
+            if sub in ("k", "consultar", "ver"): return {"accion": "HELP_K"}
+            if sub in ("a", "asignar"): return {"accion": "HELP_A"}
+            if sub in ("e", "eliminar", "borrar"): return {"accion": "HELP_E"}
+            if sub in ("s", "super", "mercado"): return {"accion": "HELP_S"}
+            if sub in ("estado", "status"): return {"accion": "HELP_ESTADO"}
+            return {"accion": "HELP"}
+
+    # 🔹 PARSER PRINCIPAL (Usa :: estrictamente para el resto de comandos)
+    p = [x.strip() for x in texto.split("::") if x.strip()]
+    if not p: return None
+
+    primera = p[0].lower()
+
+    # Estado: 5::0, 5::1, 5::null
     if len(p) == 2 and p[0].isdigit() and p[1].lower() in ("0", "1", "null"):
         return {"accion": "ESTADO", "id": int(p[0]), "estado": p[1]}
-    
-    # 🔹 Supermercado
-    if primera == "s" and len(p) == 1:
-        return {"accion": "S_LIST"}
+
+    # Supermercado
+    if primera == "s" and len(p) == 1: return {"accion": "S_LIST"}
     if primera == "s" and len(p) == 3 and p[1].isdigit() and p[2] in ("0", "1"):
         return {"accion": "S_STATE", "id": int(p[1]), "existencia": int(p[2])}
-    
+
     acc = p[0].upper()
-    
-    # 🔹 Crear (C)
+
+    # Crear (C)
     if acc == "C" and len(p) >= 3:
-        sub = p[1].upper()
-        if sub == "U":
-            return {"accion": "C_USUARIO", "nombre": p[2]}
-        if sub == "C":
-            return {"accion": "C_CATEGORIA", "nombre": p[2]}
-        # c::cat::desc::[0|1]
+        if p[1].upper() == "U": return {"accion": "C_USUARIO", "nombre": p[2]}
+        if p[1].upper() == "C": return {"accion": "C_CATEGORIA", "nombre": p[2]}
         est = int(p[3]) if len(p) > 3 and p[3] in ("0", "1") else None
         return {"accion": "C_TAREA", "cat": p[1], "desc": p[2], "estado": est}
-    
-    # 🔹 Consultar (K)
+
+    # Consultar (K)
     elif acc == "K" and len(p) >= 2:
-        if p[1].upper() == "U" and len(p) == 2:
-            return {"accion": "K_USUARIOS"}
-        if p[1].upper() == "U" and len(p) == 3:
-            return {"accion": "K_USUARIO_TAREAS", "usuario": p[2]}
-        if p[1].upper() == "C" and len(p) == 2:
-            return {"accion": "K_CATEGORIAS"}
-        if p[1].upper() != "T" and len(p) == 2:
-            return {"accion": "K_CAT_TAREAS", "cat": p[1]}
-        if p[1].upper() != "T" and len(p) == 3 and p[2] in ("0", "1"):
-            return {"accion": "K_CAT_ESTADO", "cat": p[1], "estado": int(p[2])}
-        if p[1].upper() == "T" and len(p) == 2:
-            return {"accion": "K_TODAS"}
-        if p[1].upper() == "T" and len(p) == 3 and p[2] in ("0", "1"):
-            return {"accion": "K_ESTADO_GLOBAL", "estado": int(p[2])}
-            
-    # 🔹 Asignar (A) -> a::id::usuario
+        if p[1].upper() == "U":
+            return {"accion": "K_USUARIOS"} if len(p)==2 else {"accion": "K_USUARIO_TAREAS", "usuario": p[2]}
+        if p[1].upper() == "C":
+            return {"accion": "K_CATEGORIAS"} if len(p)==2 else {"accion": "K_CAT_ESTADO", "cat": p[1], "estado": int(p[2])}
+        if p[1].upper() == "T":
+            return {"accion": "K_TODAS"} if len(p)==2 else {"accion": "K_ESTADO_GLOBAL", "estado": int(p[2])}
+        # Fallback para k::categoria
+        return {"accion": "K_CAT_TAREAS", "cat": p[1]}
+
+    # Asignar (A)
     elif acc == "A" and len(p) == 3 and p[1].isdigit():
         return {"accion": "ASIGNAR", "id": int(p[1]), "usuario": p[2]}
 
-    # 🔹 Eliminar (E)
+    # Eliminar (E)
     elif acc == "E" and len(p) == 3:
-        sub = p[1].upper()
-        if sub == "U":
-            return {"accion": "E_USUARIO", "nombre": p[2]}
-        if sub == "C":
-            return {"accion": "E_CATEGORIA", "nombre": p[2]}
-        if sub == "T":
-            return {"accion": "E_TAREA", "id": int(p[2])}
+        if p[1].upper() == "U": return {"accion": "E_USUARIO", "nombre": p[2]}
+        if p[1].upper() == "C": return {"accion": "E_CATEGORIA", "nombre": p[2]}
+        if p[1].upper() == "T": return {"accion": "E_TAREA", "id": int(p[2])}
 
     return None
 
