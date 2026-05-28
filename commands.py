@@ -16,6 +16,20 @@ def _rows_to_dicts(rows, columns=None):
     # Fallback seguro
     return [dict(row) for row in rows]
 
+def _format_task_list(rows, columns):
+    """Formatea tareas para lectura humana inmediata en iOS Shortcuts."""
+    if not rows:
+        return "No hay tareas."
+    tasks = _rows_to_dicts(rows, columns)
+    lines = []
+    for t in tasks:
+        estado = t.get("estado")
+        icon = "" if estado == 0 else ("✅" if estado == 1 else "❓")
+        estado_txt = {0: "Pendiente", 1: "Completada", None: "Sin definir"}.get(estado, "❓")
+        user_tag = f" 👤{t['usuario_id']}" if t.get("usuario_id") is not None else ""
+        lines.append(f"🆔 {t['id']} | {icon} {t['descripcion']} (P:{t.get('prioridad',3)}) [{estado_txt}]{user_tag}")
+    return "\n".join(lines)
+
 def parsear(texto: str) -> dict | None:
     texto = texto.strip()
     if not texto: return None
@@ -218,43 +232,41 @@ async def ejecutar(cmd: dict):
             res = await c.execute("SELECT id, nombre FROM usuario ORDER BY nombre")
             items = _rows_to_dicts(res.rows, res.columns)
             nombres = ", ".join([i["nombre"] for i in items]) if items else "Ninguno"
-            return {"msg": f" Usuarios: {nombres}", "items": items}
-        
+            return {"msg": f"👥 Usuarios: {nombres}", "items": items}
+
         if acc == "K_USUARIO_TAREAS":
             uid = await c.execute("SELECT id FROM usuario WHERE nombre=?", (cmd["usuario"],))
             if not uid.rows:
                 return {"msg": f"Usuario '{cmd['usuario']}' no encontrado", "items": []}
-            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, c.nombre as categoria
+            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, t.usuario_id
                 FROM tarea t JOIN categoria c ON t.categoria_id=c.id WHERE t.usuario_id=? AND t.estado=0""", (uid.rows[0]["id"],))
-            return {"msg": f"{len(res.rows)} pendientes para {cmd['usuario']}", "items": _rows_to_dicts(res.rows, res.columns)}
-        
+            return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
+
         if acc == "K_CATEGORIAS":
             res = await c.execute("SELECT id, nombre FROM categoria ORDER BY nombre")
             items = _rows_to_dicts(res.rows, res.columns)
             nombres = ", ".join([i["nombre"] for i in items]) if items else "Ninguna"
             return {"msg": f"📁 Categorías: {nombres}", "items": items}
-        
+
         if acc == "K_CAT_TAREAS":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, t.usuario_id FROM tarea t
                 JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? ORDER BY t.id""", (cmd["cat"],))
-            return {"msg": f"{len(res.rows)} tareas en '{cmd['cat']}'", "items": _rows_to_dicts(res.rows, res.columns)}
-        
+            return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
+
         if acc == "K_CAT_ESTADO":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.usuario_id FROM tarea t
                 JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? AND t.estado=? ORDER BY t.id""", (cmd["cat"], cmd["estado"]))
-            tipo = "pendientes" if cmd["estado"]==0 else "completadas"
-            return {"msg": f"{len(res.rows)} {tipo} en '{cmd['cat']}'", "items": _rows_to_dicts(res.rows, res.columns)}
-        
+            return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
+
         if acc == "K_TODAS":
-            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
+            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, t.usuario_id, c.nombre as categoria FROM tarea t
                 JOIN categoria c ON t.categoria_id=c.id ORDER BY c.nombre, t.id""")
-            return {"msg": f"{len(res.rows)} tareas totales", "items": _rows_to_dicts(res.rows, res.columns)}
-        
+            return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
+
         if acc == "K_ESTADO_GLOBAL":
-            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, c.nombre as categoria FROM tarea t
+            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.usuario_id, c.nombre as categoria FROM tarea t
                 JOIN categoria c ON t.categoria_id=c.id WHERE t.estado=? ORDER BY c.nombre, t.id""", (cmd["estado"],))
-            tipo = "pendientes" if cmd["estado"]==0 else "completadas"
-            return {"msg": f"{len(res.rows)} tareas {tipo}", "items": _rows_to_dicts(res.rows, res.columns)}
+            return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         # 🔹 ELIMINAR
         if acc == "E_USUARIO":
