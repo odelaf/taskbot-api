@@ -216,7 +216,10 @@ async def ejecutar(cmd: dict):
         # 🔹 CONSULTAR
         if acc == "K_USUARIOS":
             res = await c.execute("SELECT id, nombre FROM usuario ORDER BY nombre")
-            return {"msg": f"{len(res.rows)} usuarios", "items": _rows_to_dicts(res.rows, res.columns)}
+            items = _rows_to_dicts(res.rows, res.columns)
+            nombres = ", ".join([i["nombre"] for i in items]) if items else "Ninguno"
+            return {"msg": f" Usuarios: {nombres}", "items": items}
+        
         if acc == "K_USUARIO_TAREAS":
             uid = await c.execute("SELECT id FROM usuario WHERE nombre=?", (cmd["usuario"],))
             if not uid.rows:
@@ -227,7 +230,9 @@ async def ejecutar(cmd: dict):
         
         if acc == "K_CATEGORIAS":
             res = await c.execute("SELECT id, nombre FROM categoria ORDER BY nombre")
-            return {"msg": f"{len(res.rows)} categorías", "items": _rows_to_dicts(res.rows, res.columns)}
+            items = _rows_to_dicts(res.rows, res.columns)
+            nombres = ", ".join([i["nombre"] for i in items]) if items else "Ninguna"
+            return {"msg": f"📁 Categorías: {nombres}", "items": items}
         
         if acc == "K_CAT_TAREAS":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, t.usuario_id FROM tarea t
