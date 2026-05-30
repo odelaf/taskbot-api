@@ -1,0 +1,6 @@
+[build]
+cmd = "python -m venv /app/.venv && /app/.venv/bin/pip install -r requirements.txt"
+
+[start]
+cmd = "python main.py"
+
