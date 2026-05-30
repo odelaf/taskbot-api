@@ -206,13 +206,14 @@ async def ejecutar(cmd: dict):
 
         # 🔹 SUPERMERCADO
         if acc == "S_LIST":
-            res = await c.execute("SELECT id, chino, pinyin, español, existencia FROM supermercado WHERE existencia=0 OR existencia IS NULL ORDER BY id")
+            # Estricto: solo existencia = 0. Ignora NULL y 1.
+            res = await c.execute("SELECT id, chino, pinyin, español FROM supermercado WHERE existencia = 0 ORDER BY id")
             items = _rows_to_dicts(res.rows, res.columns)
             
             if not items:
-                return {"msg": "🛒 Lista vacía. ¡Todo comprado!", "items": []}
+                return {"msg": " Lista vacía. Todo comprado o sin estado definido.", "items": []}
             
-            # Formatear lista legible: ID + Chino + Español
+            # Construir lista legible línea por línea
             lines = []
             for item in items:
                 chino = item.get("chino", "")
@@ -220,14 +221,13 @@ async def ejecutar(cmd: dict):
                 español = item.get("español", "")
                 item_id = item.get("id")
                 
-                # Formato: 🆔1 | 牛奶 (niúnǎi) - Leche
                 if pinyin:
                     lines.append(f"🆔{item_id} | {chino} ({pinyin}) - {español}")
                 else:
                     lines.append(f"🆔{item_id} | {chino} - {español}")
             
-            msg = "🛒 **Pendientes:**\n" + "\n".join(lines)
-            return {"msg": msg, "items": items}
+            return {"msg": "🛒 Pendientes:\n" + "\n".join(lines), "items": items}
+        
         if acc == "S_STATE":
             await c.execute("UPDATE supermercado SET existencia=?, actualizado_en=datetime('now') WHERE id=?", (cmd["existencia"], cmd["id"]))
             return {"msg": f"Item {cmd['id']} → {'comprado' if cmd['existencia']==1 else 'pendiente'}", "items": []}
