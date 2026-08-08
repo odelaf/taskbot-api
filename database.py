@@ -9,11 +9,17 @@ def get_db():
     if _client is None:
         url = os.getenv("TURSO_DATABASE_URL")
         token = os.getenv("TURSO_AUTH_TOKEN")
-        # 🔥 Fallback HTTPS para evitar error 505 de WebSocket
         if url and url.startswith("libsql://"):
             url = url.replace("libsql://", "https://", 1)
         _client = libsql_client.create_client(url=url, auth_token=token)
     return _client
+
+
+async def close_db():
+    global _client
+    if _client is not None:
+        await _client.close()
+        _client = None
 
 async def init_db():
     c = get_db()

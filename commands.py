@@ -294,15 +294,15 @@ async def ejecutar(cmd: dict):
         # ------- ELIMINAR -------
         elif acc == "E_USUARIO":
             r = await c.execute("DELETE FROM usuario WHERE nombre=?", (cmd["nombre"],))
-            return {"msg": f"Usuario '{cmd['nombre']}' eliminado" if r.affected_row_count else "Usuario no encontrado", "items": []}
+            return {"msg": f"Usuario '{cmd['nombre']}' eliminado" if r.rows_affected else "Usuario no encontrado", "items": []}
 
         elif acc == "E_CATEGORIA":
             r = await c.execute("DELETE FROM categoria WHERE nombre=?", (cmd["nombre"],))
-            return {"msg": f"Categoria '{cmd['nombre']}' eliminada" if r.affected_row_count else "No encontrada", "items": []}
+            return {"msg": f"Categoria '{cmd['nombre']}' eliminada" if r.rows_affected else "No encontrada", "items": []}
 
         elif acc == "E_TAREA":
             r = await c.execute("DELETE FROM tarea WHERE id=?", (cmd["id"],))
-            return {"msg": f"Tarea {cmd['id']} eliminada" if r.affected_row_count else "No encontrada", "items": []}
+            return {"msg": f"Tarea {cmd['id']} eliminada" if r.rows_affected else "No encontrada", "items": []}
 
         else:
             return {"msg": "Comando no reconocido. Usa 'help'.", "items": []}
