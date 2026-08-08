@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
-        logger.info("🚀 lifespan: iniciando...")
+        logger.info("lifespan: iniciando...")
         await db.init_db()
-        logger.info("✅ lifespan: BD inicializada")
+        logger.info("lifespan: BD inicializada")
         yield
     except Exception as e:
-        logger.error(f"❌ lifespan CRASH: {e}")
+        logger.error(f"lifespan CRASH: {e}")
         raise
 
 app = FastAPI(title="TaskBot API", lifespan=lifespan)
@@ -27,7 +27,7 @@ app = FastAPI(title="TaskBot API", lifespan=lifespan)
 # Manejador global de errores
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
-    logger.error(f"❌ Unhandled: {exc}")
+    logger.error(f"Unhandled: {exc}")
     import traceback; traceback.print_exc()
     return JSONResponse(
         status_code=500,
@@ -47,11 +47,11 @@ def health():
 
 @app.post("/ejecutar")
 async def ejecutar_comando(input: CommandInput):
-    logger.info(f"📥 Recibido: '{input.texto}'")
+    logger.info(f"Recibido: '{input.texto}'")
     cmd = commands.parsear(input.texto)
     
     if not cmd:
-        logger.warning(f"❌ Parseo fallido para: '{input.texto}'")
+        logger.warning(f"Parseo fallido para: '{input.texto}'")
         return JSONResponse(
             status_code=400,
             content={
@@ -62,5 +62,5 @@ async def ejecutar_comando(input: CommandInput):
         )
     
     resultado = await commands.ejecutar(cmd)
-    logger.info(f"📤 Respuesta: {resultado['msg'][:50]}...")
+    logger.info(f"Respuesta: {resultado['msg'][:50]}...")
     return {"status": "ok", "msg": resultado["msg"], "items": resultado["items"]}

@@ -54,4 +54,4 @@ async def init_db():
     await c.execute("CREATE INDEX IF NOT EXISTS idx_tarea_usr ON tarea(usuario_id)")
     await c.execute("CREATE INDEX IF NOT EXISTS idx_tarea_estado ON tarea(estado)")
     await c.execute("CREATE INDEX IF NOT EXISTS idx_super_exist ON supermercado(existencia)")
-    print("✅ BD Turso inicializada con nuevo esquema", file=sys.stderr)
+    print("BD Turso inicializada con nuevo esquema", file=sys.stderr)
