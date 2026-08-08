@@ -209,7 +209,7 @@ async def ejecutar(cmd: dict):
 
         # ------- SUPERMERCADO -------
         elif acc == "S_LIST":
-            res = await c.execute("SELECT id, chino, pinyin, espanol FROM supermercado WHERE existencia = 0 ORDER BY id")
+            res = await c.execute("SELECT id, chino, pinyin, español FROM supermercado WHERE existencia = 0 ORDER BY id")
             items = _rows_to_dicts(res.rows, res.columns)
 
             if not items:
@@ -219,7 +219,7 @@ async def ejecutar(cmd: dict):
             for item in items:
                 chino = item.get("chino", "")
                 pinyin = item.get("pinyin", "")
-                espanol = item.get("espanol", "")
+                espanol = item.get("español", "")
                 item_id = item.get("id")
 
                 if pinyin:
