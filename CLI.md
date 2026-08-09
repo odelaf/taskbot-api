@@ -62,6 +62,7 @@ Con el alias: `t k::t`, `t help`, etc.
 | Cambiar prioridad | `p::id::1-5` | `p::5::1` |
 | Asignar tarea | `a::id::usuario` | `a::5::juan` |
 | Cambiar estado | `id::0\|1\|null` | `5::1` |
+| Renombrar tarea | `r::id::nombre` | `r::5::comprar pan` |
 | Eliminar | `e::u\|c\|t::nombre\|id` | `e::t::4` |
 | Supermercado | `s` | `s::3::1` |
 

@@ -41,6 +41,7 @@ def parsear(texto: str) -> dict | None:
             if sub in ("k", "consultar", "ver"): return {"accion": "HELP_K"}
             if sub in ("a", "asignar"):   return {"accion": "HELP_A"}
             if sub in ("e", "eliminar", "borrar"): return {"accion": "HELP_E"}
+            if sub in ("r", "renombrar", "renom"): return {"accion": "HELP_R"}
             if sub in ("s", "super", "mercado"): return {"accion": "HELP_S"}
             if sub in ("p", "prioridad", "prio"): return {"accion": "HELP_P"}
             if sub in ("estado", "status"): return {"accion": "HELP_ESTADO"}
@@ -120,6 +121,10 @@ def parsear(texto: str) -> dict | None:
         if p[1].upper() == "C": return {"accion": "E_CATEGORIA", "nombre": p[2]}
         if p[1].upper() == "T": return {"accion": "E_TAREA", "id": int(p[2])}
 
+    # Renombrar tarea: r::id::nuevo nombre
+    if primera == "r" and len(p) >= 3 and p[1].isdigit():
+        return {"accion": "RENOMBRAR", "id": int(p[1]), "nombre": p[2]}
+
     return None
 
 
@@ -136,6 +141,7 @@ async def ejecutar(cmd: dict):
                 "  k = Consultar (Ver listas, tareas pendientes)\n"
                 "  a = Asignar (Tarea a Usuario)\n"
                 "  p = Prioridad (Cambiar prioridad 1-5)\n"
+                "  r = Renombrar (Cambiar nombre de tarea)\n"
                 "  e = Eliminar (Borrar registros)\n"
                 "  s = Supermercado (Lista de compras)\n"
                 "  id::0|1|null = Cambiar estado de tarea\n\n"
@@ -189,6 +195,14 @@ async def ejecutar(cmd: dict):
                 "e::u::nombre  -> Borra usuario\n"
                 "e::c::nombre  -> Borra categoria (y sus tareas)\n"
                 "e::t::id      -> Borra tarea por ID"
+            ), "items": []}
+
+        elif acc == "HELP_R":
+            return {"msg": (
+                "--- Renombrar Tarea (r::) ---\n\n"
+                "r::id::nuevo nombre\n\n"
+                "Cambia la descripcion de una tarea.\n"
+                "  Ej: r::5::limpiar cocina y baño"
             ), "items": []}
 
         elif acc == "HELP_S":
@@ -264,7 +278,12 @@ async def ejecutar(cmd: dict):
 
                 if pinyin:
                     lines.append(f"#{item_id} {chino} ({pinyin}) - {espanol}")
-                else:
+        # ------- RENOMBRAR -------
+        elif acc == "RENOMBRAR":
+            await c.execute("UPDATE tarea SET descripcion=?, actualizado_en=datetime('now') WHERE id=?", (cmd["nombre"], cmd["id"]))
+            return {"msg": f"Tarea {cmd['id']} renombrada a '{cmd['nombre']}'", "items": []}
+
+        else:
                     lines.append(f"#{item_id} {chino} - {espanol}")
 
             return {"msg": "Pendientes:\n" + "\n".join(lines), "items": items}
