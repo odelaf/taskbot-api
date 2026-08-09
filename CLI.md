@@ -58,6 +58,7 @@ Con el alias: `t k::t`, `t help`, etc.
 | Listar categorías | `k::c` | |
 | Listar tareas | `k::t` | `k::t::0` (pendientes) |
 | Listar por categoría | `k::categoria` | `k::casa::0` |
+| Listar varias categorías | `k::cat1,cat2` | `k::casa,qq::0` |
 | Filtrar por prioridad | `k::t::p::1-5` | `k::t::p::1` (urgentes) |
 | Cambiar prioridad | `p::id::1-5` | `p::5::1` |
 | Asignar tarea | `a::id::usuario` | `a::5::juan` |

@@ -104,12 +104,14 @@ def parsear(texto: str) -> dict | None:
             return {"accion": "K_ESTADO_GLOBAL", "estado": int(p[2])}
 
         # k::categoria / k::categoria::0/1 / k::categoria::p::1-5
+        # Soporta múltiples categorías separadas por coma: k::casa,qq::0
+        cats = [c.strip() for c in p[1].split(",")]
         if len(p) == 2:
-            return {"accion": "K_CAT_TAREAS", "cat": p[1]}
+            return {"accion": "K_CAT_TAREAS", "cats": cats}
         if len(p) == 3 and p[2] in ("0", "1"):
-            return {"accion": "K_CAT_ESTADO", "cat": p[1], "estado": int(p[2])}
+            return {"accion": "K_CAT_ESTADO", "cats": cats, "estado": int(p[2])}
         if len(p) == 4 and p[2].lower() == "p" and p[3].isdigit():
-            return {"accion": "K_CAT_PRIORIDAD", "cat": p[1], "prioridad": int(p[3])}
+            return {"accion": "K_CAT_PRIORIDAD", "cats": cats, "prioridad": int(p[3])}
 
     # Asignar (A)
     if acc == "A" and len(p) == 3 and p[1].isdigit():
@@ -174,7 +176,9 @@ async def ejecutar(cmd: dict):
                 "k::u::nombre      -> Tareas pendientes de un usuario\n"
                 "k::c              -> Lista categorias\n"
                 "k::categoria      -> Tareas de esa categoria\n"
+                "k::cat1,cat2      -> Tareas de varias categorias\n"
                 "k::categoria::0   -> Pendientes de esa categoria\n"
+                "k::cat1,cat2::0   -> Pendientes de varias categorias\n"
                 "k::categoria::p::1 -> Tareas de esa categoria con prioridad 1\n"
                 "k::t              -> Todas las tareas\n"
                 "k::t::0           -> Todas las pendientes\n"
@@ -327,18 +331,24 @@ async def ejecutar(cmd: dict):
             return {"msg": f"Categorias: {nombres}", "items": items}
 
         elif acc == "K_CAT_TAREAS":
-            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
-                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? ORDER BY CASE WHEN t.estado = 0 THEN 0 WHEN t.estado IS NULL THEN 1 ELSE 2 END, t.prioridad, t.id""", (cmd["cat"],))
+            cats = cmd["cats"]
+            ph = ",".join(["?"] * len(cats))
+            res = await c.execute(f"""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
+                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre IN ({ph}) ORDER BY CASE WHEN t.estado = 0 THEN 0 WHEN t.estado IS NULL THEN 1 ELSE 2 END, t.prioridad, t.id""", cats)
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_CAT_ESTADO":
-            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
-                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? AND t.estado=? ORDER BY t.prioridad, t.id""", (cmd["cat"], cmd["estado"]))
+            cats = cmd["cats"]
+            ph = ",".join(["?"] * len(cats))
+            res = await c.execute(f"""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
+                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre IN ({ph}) AND t.estado=? ORDER BY t.prioridad, t.id""", [*cats, cmd["estado"]])
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_CAT_PRIORIDAD":
-            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
-                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? AND t.prioridad=? ORDER BY CASE WHEN t.estado = 0 THEN 0 WHEN t.estado IS NULL THEN 1 ELSE 2 END, t.id""", (cmd["cat"], cmd["prioridad"]))
+            cats = cmd["cats"]
+            ph = ",".join(["?"] * len(cats))
+            res = await c.execute(f"""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
+                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre IN ({ph}) AND t.prioridad=? ORDER BY CASE WHEN t.estado = 0 THEN 0 WHEN t.estado IS NULL THEN 1 ELSE 2 END, t.id""", [*cats, cmd["prioridad"]])
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_TODAS":
