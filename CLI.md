@@ -53,15 +53,31 @@ Con el alias: `t k::t`, `t help`, etc.
 | Ayuda | `help` | `help c` |
 | Crear usuario | `c::u::nombre` | `c::u::juan` |
 | Crear categoría | `c::c::nombre` | `c::c::casa` |
-| Crear tarea | `c::cat::desc::[0\|1]` | `c::casa::limpiar::0` |
+| Crear tarea | `c::cat::desc::[0\|1]::[1-5]` | `c::casa::limpiar::0::2` |
 | Listar usuarios | `k::u` | |
 | Listar categorías | `k::c` | |
 | Listar tareas | `k::t` | `k::t::0` (pendientes) |
 | Listar por categoría | `k::categoria` | `k::casa::0` |
+| Filtrar por prioridad | `k::t::p::1-5` | `k::t::p::1` (urgentes) |
+| Cambiar prioridad | `p::id::1-5` | `p::5::1` |
 | Asignar tarea | `a::id::usuario` | `a::5::juan` |
 | Cambiar estado | `id::0\|1\|null` | `5::1` |
 | Eliminar | `e::u\|c\|t::nombre\|id` | `e::t::4` |
 | Supermercado | `s` | `s::3::1` |
+
+### Prioridad
+
+Escala de 1 a 5:
+
+| Valor | Significado |
+|---|---|
+| `1` | Urgente |
+| `2` | Alta |
+| `3` | Media (default) |
+| `4` | Baja |
+| `5` | Mínima |
+
+Se puede definir al crear (`c::cat::tarea::0::2`) o cambiar después (`p::id::2`).
 
 ### Estados
 

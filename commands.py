@@ -42,6 +42,7 @@ def parsear(texto: str) -> dict | None:
             if sub in ("a", "asignar"):   return {"accion": "HELP_A"}
             if sub in ("e", "eliminar", "borrar"): return {"accion": "HELP_E"}
             if sub in ("s", "super", "mercado"): return {"accion": "HELP_S"}
+            if sub in ("p", "prioridad", "prio"): return {"accion": "HELP_P"}
             if sub in ("estado", "status"): return {"accion": "HELP_ESTADO"}
             return {"accion": "HELP"}
 
@@ -61,6 +62,12 @@ def parsear(texto: str) -> dict | None:
     if primera == "s" and len(p) == 3 and p[1].isdigit() and p[2] in ("0", "1"):
         return {"accion": "S_STATE", "id": int(p[1]), "existencia": int(p[2])}
 
+    # Prioridad: p::id::1-5
+    if primera == "p" and len(p) == 3 and p[1].isdigit() and p[2].isdigit():
+        prio = int(p[2])
+        if 1 <= prio <= 5:
+            return {"accion": "PRIORIDAD", "id": int(p[1]), "prioridad": prio}
+
     acc = p[0].upper()
 
     # Crear (C)
@@ -70,7 +77,8 @@ def parsear(texto: str) -> dict | None:
         if p[1].upper() == "C":
             return {"accion": "C_CATEGORIA", "nombre": p[2]}
         est = int(p[3]) if len(p) > 3 and p[3] in ("0", "1") else None
-        return {"accion": "C_TAREA", "cat": p[1], "desc": p[2], "estado": est}
+        prio = int(p[4]) if len(p) > 4 and p[4].isdigit() and 1 <= int(p[4]) <= 5 else None
+        return {"accion": "C_TAREA", "cat": p[1], "desc": p[2], "estado": est, "prioridad": prio}
 
     # Consultar (K)
     if acc == "K" and len(p) >= 2:
@@ -86,17 +94,21 @@ def parsear(texto: str) -> dict | None:
         if sub == "C" and len(p) == 2:
             return {"accion": "K_CATEGORIAS"}
 
-        # k::t / k::t::0/1
+        # k::t / k::t::0/1 / k::t::p::1-5
         if sub == "T":
             if len(p) == 2:
                 return {"accion": "K_TODAS"}
+            if len(p) == 4 and p[2].lower() == "p" and p[3].isdigit():
+                return {"accion": "K_PRIORIDAD_GLOBAL", "prioridad": int(p[3])}
             return {"accion": "K_ESTADO_GLOBAL", "estado": int(p[2])}
 
-        # k::categoria / k::categoria::0/1
+        # k::categoria / k::categoria::0/1 / k::categoria::p::1-5
         if len(p) == 2:
             return {"accion": "K_CAT_TAREAS", "cat": p[1]}
         if len(p) == 3 and p[2] in ("0", "1"):
             return {"accion": "K_CAT_ESTADO", "cat": p[1], "estado": int(p[2])}
+        if len(p) == 4 and p[2].lower() == "p" and p[3].isdigit():
+            return {"accion": "K_CAT_PRIORIDAD", "cat": p[1], "prioridad": int(p[3])}
 
     # Asignar (A)
     if acc == "A" and len(p) == 3 and p[1].isdigit():
@@ -123,9 +135,11 @@ async def ejecutar(cmd: dict):
                 "  c = Crear (Usuarios, Categorias, Tareas)\n"
                 "  k = Consultar (Ver listas, tareas pendientes)\n"
                 "  a = Asignar (Tarea a Usuario)\n"
+                "  p = Prioridad (Cambiar prioridad 1-5)\n"
                 "  e = Eliminar (Borrar registros)\n"
                 "  s = Supermercado (Lista de compras)\n"
                 "  id::0|1|null = Cambiar estado de tarea\n\n"
+                "Escala de prioridad: 1=Urgente, 2=Alta, 3=Media, 4=Baja, 5=Minima\n\n"
                 "Escribe help [letra] para ver la sintaxis de cada comando.\n"
                 "Ejemplo: help c  o  help k"
             ), "items": []}
@@ -139,22 +153,26 @@ async def ejecutar(cmd: dict):
                 "c::c::nombre\n"
                 "  Crea una categoria.\n"
                 "  Ej: c::c::casa\n\n"
-                "c::categoria::tarea::[0|1]\n"
-                "  Crea una tarea. 0=Pendiente, 1=Completada.\n"
-                "  Si omites el numero, queda sin definir.\n"
-                "  Ej: c::casa::limpiar::0"
+                "c::categoria::tarea::[estado]\n"
+                "  Crea una tarea. 0=Pendiente, 1=Completada, omitir=Sin definir.\n"
+                "  Ej: c::casa::limpiar::0\n\n"
+                "c::categoria::tarea::[estado]::[prioridad]\n"
+                "  Crea una tarea con prioridad (1-5).\n"
+                "  Ej: c::casa::limpiar::0::2  (pendiente, prioridad alta)"
             ), "items": []}
 
         elif acc == "HELP_K":
             return {"msg": (
                 "--- Sintaxis de Consulta (k::) ---\n\n"
-                "k::u            -> Lista usuarios\n"
-                "k::u::nombre    -> Tareas pendientes de un usuario\n"
-                "k::c            -> Lista categorias\n"
-                "k::categoria    -> Tareas de esa categoria\n"
-                "k::categoria::0 -> Pendientes de esa categoria\n"
-                "k::t            -> Todas las tareas\n"
-                "k::t::0         -> Todas las pendientes"
+                "k::u              -> Lista usuarios\n"
+                "k::u::nombre      -> Tareas pendientes de un usuario\n"
+                "k::c              -> Lista categorias\n"
+                "k::categoria      -> Tareas de esa categoria\n"
+                "k::categoria::0   -> Pendientes de esa categoria\n"
+                "k::categoria::p::1 -> Tareas de esa categoria con prioridad 1\n"
+                "k::t              -> Todas las tareas\n"
+                "k::t::0           -> Todas las pendientes\n"
+                "k::t::p::1        -> Todas las tareas con prioridad 1"
             ), "items": []}
 
         elif acc == "HELP_A":
@@ -189,6 +207,23 @@ async def ejecutar(cmd: dict):
                 "id::null      -> Limpia estado"
             ), "items": []}
 
+        elif acc == "HELP_P":
+            return {"msg": (
+                "--- Escala de Prioridad (p::) ---\n\n"
+                "1 = Urgente\n"
+                "2 = Alta\n"
+                "3 = Media (default)\n"
+                "4 = Baja\n"
+                "5 = Minima\n\n"
+                "Cambiar prioridad: p::id::1-5\n"
+                "  Ej: p::5::1  (tarea 5 a urgente)\n\n"
+                "Crear con prioridad:\n"
+                "  Ej: c::trabajo::informe::0::2\n\n"
+                "Filtrar por prioridad:\n"
+                "  k::t::p::1        (todas las urgentes)\n"
+                "  k::trabajo::p::2  (trabajo con prioridad alta)"
+            ), "items": []}
+
         # ------- ASIGNAR -------
         elif acc == "ASIGNAR":
             uid_res = await c.execute("SELECT id FROM usuario WHERE nombre=?", (cmd["usuario"],))
@@ -206,6 +241,11 @@ async def ejecutar(cmd: dict):
             await c.execute("UPDATE tarea SET estado=?, actualizado_en=datetime('now'), completada_en=? WHERE id=?",
                             (int(cmd["estado"]), comp, cmd["id"]))
             return {"msg": f"Tarea {cmd['id']} -> {'completada' if cmd['estado']=='1' else 'pendiente'}", "items": []}
+
+        # ------- PRIORIDAD -------
+        elif acc == "PRIORIDAD":
+            await c.execute("UPDATE tarea SET prioridad=?, actualizado_en=datetime('now') WHERE id=?", (cmd["prioridad"], cmd["id"]))
+            return {"msg": f"Tarea {cmd['id']} -> prioridad {cmd['prioridad']}", "items": []}
 
         # ------- SUPERMERCADO -------
         elif acc == "S_LIST":
@@ -246,8 +286,9 @@ async def ejecutar(cmd: dict):
             cat_res = await c.execute("SELECT id FROM categoria WHERE nombre=?", (cmd["cat"],))
             if not cat_res.rows:
                 return {"msg": f"Categoria '{cmd['cat']}' no existe", "items": []}
-            await c.execute("INSERT INTO tarea (categoria_id, usuario_id, descripcion, prioridad, estado) VALUES (?, NULL, ?, 3, ?)",
-                            (cat_res.rows[0]["id"], cmd["desc"], cmd["estado"]))
+            prioridad = cmd.get("prioridad") or 3
+            await c.execute("INSERT INTO tarea (categoria_id, usuario_id, descripcion, prioridad, estado) VALUES (?, NULL, ?, ?, ?)",
+                            (cat_res.rows[0]["id"], cmd["desc"], prioridad, cmd["estado"]))
             return {"msg": f"Tarea '{cmd['desc']}' en '{cmd['cat']}'", "items": []}
 
         # ------- CONSULTAR -------
@@ -281,6 +322,11 @@ async def ejecutar(cmd: dict):
                 JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? AND t.estado=? ORDER BY t.id""", (cmd["cat"], cmd["estado"]))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
+        elif acc == "K_CAT_PRIORIDAD":
+            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
+                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? AND t.prioridad=? ORDER BY t.id""", (cmd["cat"], cmd["prioridad"]))
+            return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
+
         elif acc == "K_TODAS":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, t.usuario_id, c.nombre as categoria FROM tarea t
                 JOIN categoria c ON t.categoria_id=c.id ORDER BY c.nombre, t.id""")
@@ -289,6 +335,11 @@ async def ejecutar(cmd: dict):
         elif acc == "K_ESTADO_GLOBAL":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
                 JOIN categoria c ON t.categoria_id=c.id WHERE t.estado=? ORDER BY c.nombre, t.id""", (cmd["estado"],))
+            return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
+
+        elif acc == "K_PRIORIDAD_GLOBAL":
+            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
+                JOIN categoria c ON t.categoria_id=c.id WHERE t.prioridad=? ORDER BY c.nombre, t.id""", (cmd["prioridad"],))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         # ------- ELIMINAR -------
