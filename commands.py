@@ -317,7 +317,7 @@ async def ejecutar(cmd: dict):
             if not uid.rows:
                 return {"msg": f"Usuario '{cmd['usuario']}' no encontrado", "items": []}
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria
-                FROM tarea t JOIN categoria c ON t.categoria_id=c.id WHERE t.usuario_id=? AND t.estado=0""", (uid.rows[0]["id"],))
+                FROM tarea t JOIN categoria c ON t.categoria_id=c.id WHERE t.usuario_id=? AND t.estado=0 ORDER BY t.prioridad, c.nombre, t.id""", (uid.rows[0]["id"],))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_CATEGORIAS":
@@ -328,32 +328,32 @@ async def ejecutar(cmd: dict):
 
         elif acc == "K_CAT_TAREAS":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
-                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? ORDER BY t.id""", (cmd["cat"],))
+                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? ORDER BY t.estado, t.prioridad, t.id""", (cmd["cat"],))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_CAT_ESTADO":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
-                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? AND t.estado=? ORDER BY t.id""", (cmd["cat"], cmd["estado"]))
+                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? AND t.estado=? ORDER BY t.prioridad, t.id""", (cmd["cat"], cmd["estado"]))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_CAT_PRIORIDAD":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
-                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? AND t.prioridad=? ORDER BY t.id""", (cmd["cat"], cmd["prioridad"]))
+                JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? AND t.prioridad=? ORDER BY t.estado, t.id""", (cmd["cat"], cmd["prioridad"]))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_TODAS":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, t.usuario_id, c.nombre as categoria FROM tarea t
-                JOIN categoria c ON t.categoria_id=c.id ORDER BY c.nombre, t.id""")
+                JOIN categoria c ON t.categoria_id=c.id ORDER BY c.nombre, t.estado, t.prioridad, t.id""")
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_ESTADO_GLOBAL":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
-                JOIN categoria c ON t.categoria_id=c.id WHERE t.estado=? ORDER BY c.nombre, t.id""", (cmd["estado"],))
+                JOIN categoria c ON t.categoria_id=c.id WHERE t.estado=? ORDER BY c.nombre, t.prioridad, t.id""", (cmd["estado"],))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_PRIORIDAD_GLOBAL":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
-                JOIN categoria c ON t.categoria_id=c.id WHERE t.prioridad=? ORDER BY c.nombre, t.id""", (cmd["prioridad"],))
+                JOIN categoria c ON t.categoria_id=c.id WHERE t.prioridad=? ORDER BY c.nombre, t.estado, t.id""", (cmd["prioridad"],))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         # ------- ELIMINAR -------
