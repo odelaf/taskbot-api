@@ -20,8 +20,8 @@ def _format_task_list(rows, columns):
     for t in tasks:
         estado = t.get("estado")
         estado_txt = {0: "Pendiente", 1: "Completada", None: "Sin definir"}.get(estado, "?")
-        user_tag = f" @{t['usuario_id']}" if t.get("usuario_id") is not None else ""
-        lines.append(f"#{t['id']} {t['descripcion']} (P:{t.get('prioridad',3)}) [{estado_txt}]{user_tag}")
+        categoria = t.get("categoria") or "?"
+        lines.append(f"{t['id']} · {categoria} · {t['descripcion']} · ({t.get('prioridad', 3)}) · [{estado_txt}]")
     return "\n".join(lines)
 
 def parsear(texto: str) -> dict | None:
@@ -261,7 +261,7 @@ async def ejecutar(cmd: dict):
             uid = await c.execute("SELECT id FROM usuario WHERE nombre=?", (cmd["usuario"],))
             if not uid.rows:
                 return {"msg": f"Usuario '{cmd['usuario']}' no encontrado", "items": []}
-            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, t.usuario_id
+            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria
                 FROM tarea t JOIN categoria c ON t.categoria_id=c.id WHERE t.usuario_id=? AND t.estado=0""", (uid.rows[0]["id"],))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
@@ -272,12 +272,12 @@ async def ejecutar(cmd: dict):
             return {"msg": f"Categorias: {nombres}", "items": items}
 
         elif acc == "K_CAT_TAREAS":
-            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, t.usuario_id FROM tarea t
+            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
                 JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? ORDER BY t.id""", (cmd["cat"],))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_CAT_ESTADO":
-            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.usuario_id FROM tarea t
+            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
                 JOIN categoria c ON t.categoria_id=c.id WHERE c.nombre=? AND t.estado=? ORDER BY t.id""", (cmd["cat"], cmd["estado"]))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
@@ -287,7 +287,7 @@ async def ejecutar(cmd: dict):
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         elif acc == "K_ESTADO_GLOBAL":
-            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.usuario_id, c.nombre as categoria FROM tarea t
+            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
                 JOIN categoria c ON t.categoria_id=c.id WHERE t.estado=? ORDER BY c.nombre, t.id""", (cmd["estado"],))
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 

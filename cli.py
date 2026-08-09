@@ -16,14 +16,14 @@ def color_output(msg: str) -> str:
     """Aplica color a la salida para mejor legibilidad en terminal."""
     lines = []
     for line in msg.split("\n"):
-        if line.startswith("#") and "Pendiente" in line:
-            parts = line.split(" ", 2)
-            if len(parts) >= 3:
-                line = f"\033[33m{parts[0]}\033[0m \033[1m{parts[1]}\033[0m \033[90m{parts[2]}\033[0m"
-        elif line.startswith("#") and "Completada" in line:
-            parts = line.split(" ", 2)
-            if len(parts) >= 3:
-                line = f"\033[32m{parts[0]}\033[0m \033[1m{parts[1]}\033[0m \033[90m{parts[2]}\033[0m"
+        if " · " in line and "[Pendiente]" in line:
+            parts = line.split(" · ", 3)
+            if len(parts) >= 4:
+                line = f"\033[33m{parts[0]}\033[0m · \033[1m{parts[1]}\033[0m · \033[1m{parts[2]}\033[0m · \033[90m{parts[3]}\033[0m"
+        elif " · " in line and "[Completada]" in line:
+            parts = line.split(" · ", 3)
+            if len(parts) >= 4:
+                line = f"\033[32m{parts[0]}\033[0m · \033[1m{parts[1]}\033[0m · \033[1m{parts[2]}\033[0m · \033[90m{parts[3]}\033[0m"
         elif line.startswith("Error"):
             line = f"\033[31m{line}\033[0m"
         lines.append(line)
