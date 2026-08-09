@@ -278,12 +278,7 @@ async def ejecutar(cmd: dict):
 
                 if pinyin:
                     lines.append(f"#{item_id} {chino} ({pinyin}) - {espanol}")
-        # ------- RENOMBRAR -------
-        elif acc == "RENOMBRAR":
-            await c.execute("UPDATE tarea SET descripcion=?, actualizado_en=datetime('now') WHERE id=?", (cmd["nombre"], cmd["id"]))
-            return {"msg": f"Tarea {cmd['id']} renombrada a '{cmd['nombre']}'", "items": []}
-
-        else:
+                else:
                     lines.append(f"#{item_id} {chino} - {espanol}")
 
             return {"msg": "Pendientes:\n" + "\n".join(lines), "items": items}
@@ -373,6 +368,11 @@ async def ejecutar(cmd: dict):
         elif acc == "E_TAREA":
             r = await c.execute("DELETE FROM tarea WHERE id=?", (cmd["id"],))
             return {"msg": f"Tarea {cmd['id']} eliminada" if r.rows_affected else "No encontrada", "items": []}
+
+        # ------- RENOMBRAR -------
+        elif acc == "RENOMBRAR":
+            await c.execute("UPDATE tarea SET descripcion=?, actualizado_en=datetime('now') WHERE id=?", (cmd["nombre"], cmd["id"]))
+            return {"msg": f"Tarea {cmd['id']} renombrada a '{cmd['nombre']}'", "items": []}
 
         else:
             return {"msg": "Comando no reconocido. Usa 'help'.", "items": []}
