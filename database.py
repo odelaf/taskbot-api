@@ -1,6 +1,9 @@
 # database.py
-import os, sys
+import os, sys, logging
 import libsql_client
+
+logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+logger = logging.getLogger(__name__)
 
 _client = None
 
@@ -60,4 +63,4 @@ async def init_db():
     await c.execute("CREATE INDEX IF NOT EXISTS idx_tarea_usr ON tarea(usuario_id)")
     await c.execute("CREATE INDEX IF NOT EXISTS idx_tarea_estado ON tarea(estado)")
     await c.execute("CREATE INDEX IF NOT EXISTS idx_super_exist ON supermercado(existencia)")
-    print("BD Turso inicializada con nuevo esquema", file=sys.stderr)
+    logger.info("BD Turso inicializada")

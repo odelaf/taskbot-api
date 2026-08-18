@@ -70,7 +70,7 @@ async def main():
         print("Asegúrate de tener un archivo .env en el directorio del proyecto.")
         sys.exit(1)
 
-    db.get_db()
+    await db.init_db()
 
     try:
         if len(sys.argv) > 1:

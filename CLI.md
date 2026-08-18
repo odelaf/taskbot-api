@@ -2,6 +2,8 @@
 
 Gestiona tareas desde la terminal del MacBook usando los mismos comandos `::` que en iOS Shortcuts.
 
+`cli.py` y `api.py` comparten el mismo motor `commands.py`: la sintaxis es idéntica en ambos. Si iOS Shortcuts muestra resultados distintos, suele ser porque el API desplegado en Render está con código viejo: hacé `git push` y redeployá.
+
 ## Requisitos
 
 Python 3.11+ y un archivo `.env` con:
