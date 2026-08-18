@@ -48,3 +48,4 @@ La sintaxis usa `::` como delimitador (general a particular):
 | `e::u\|c\|t::nombre\|id` | Eliminar usuario, categoria o tarea |
 | `id::0\|1\|null` | Cambiar estado de tarea |
 | `s` / `s::id::0\|1` | Supermercado: listar / marcar item |
+| `l` | Pendientes urgentes (estado 0, prioridad 1) |

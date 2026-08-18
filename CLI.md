@@ -68,6 +68,7 @@ Con el alias: `t k::t`, `t help`, etc.
 | Renombrar tarea | `r::id::nombre` | `r::5::comprar pan` |
 | Eliminar | `e::u\|c\|t::nombre\|id` | `e::t::4` |
 | Supermercado | `s` | `s::3::1` |
+| Urgentes pendientes | `l` | |
 
 ### Prioridad
 

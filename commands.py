@@ -44,6 +44,7 @@ def parsear(texto: str) -> dict | None:
             if sub in ("r", "renombrar", "renom"): return {"accion": "HELP_R"}
             if sub in ("s", "super", "mercado"): return {"accion": "HELP_S"}
             if sub in ("p", "prioridad", "prio"): return {"accion": "HELP_P"}
+            if sub in ("l", "urgente", "urgentes"): return {"accion": "HELP_L"}
             if sub in ("estado", "status"): return {"accion": "HELP_ESTADO"}
             return {"accion": "HELP"}
 
@@ -60,6 +61,10 @@ def parsear(texto: str) -> dict | None:
     # Supermercado
     if primera == "s" and len(p) == 1:
         return {"accion": "S_LIST"}
+
+    # Urgentes pendientes (l)
+    if primera == "l" and len(p) == 1:
+        return {"accion": "L_URGENTES"}
     if primera == "s" and len(p) == 3 and p[1].isdigit() and p[2] in ("0", "1"):
         return {"accion": "S_STATE", "id": int(p[1]), "existencia": int(p[2])}
 
@@ -146,6 +151,7 @@ async def ejecutar(cmd: dict):
                 "  r = Renombrar (Cambiar nombre de tarea)\n"
                 "  e = Eliminar (Borrar registros)\n"
                 "  s = Supermercado (Lista de compras)\n"
+                "  l = Listar pendientes urgentes (prioridad 1)\n"
                 "  id::0|1|null = Cambiar estado de tarea\n\n"
                 "Escala de prioridad: 1=Urgente, 2=Alta, 3=Media, 4=Baja, 5=Minima\n\n"
                 "Escribe help [letra] para ver la sintaxis de cada comando.\n"
@@ -240,6 +246,13 @@ async def ejecutar(cmd: dict):
                 "Filtrar por prioridad:\n"
                 "  k::t::p::1        (todas las urgentes)\n"
                 "  k::trabajo::p::2  (trabajo con prioridad alta)"
+            ), "items": []}
+
+        elif acc == "HELP_L":
+            return {"msg": (
+                "--- Listar Pendientes Urgentes (l) ---\n\n"
+                "l\n\n"
+                "Muestra todas las tareas pendientes (estado 0) con prioridad 1 (urgentes)."
             ), "items": []}
 
         # ------- ASIGNAR -------
@@ -364,6 +377,12 @@ async def ejecutar(cmd: dict):
         elif acc == "K_PRIORIDAD_GLOBAL":
             res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
                 JOIN categoria c ON t.categoria_id=c.id WHERE t.prioridad=? ORDER BY c.nombre, CASE WHEN t.estado = 0 THEN 0 WHEN t.estado IS NULL THEN 1 ELSE 2 END, t.id""", (cmd["prioridad"],))
+            return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
+
+        # ------- URGENTES PENDIENTES -------
+        elif acc == "L_URGENTES":
+            res = await c.execute("""SELECT t.id, t.descripcion, t.prioridad, t.estado, c.nombre as categoria FROM tarea t
+                JOIN categoria c ON t.categoria_id=c.id WHERE t.estado=0 AND t.prioridad=1 ORDER BY c.nombre, t.id""")
             return {"msg": _format_task_list(res.rows, res.columns), "items": _rows_to_dicts(res.rows, res.columns)}
 
         # ------- ELIMINAR -------
